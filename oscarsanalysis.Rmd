@@ -1,0 +1,375 @@
+---
+title: "Oscars_analysis"
+output:
+  html_document:
+    df_print: paged
+---
+
+After gathering the data from the Oscars Awards database and Wikidata and cleaning it using Python, I had a dataset with 718 winners in the categories: actor/actress in a leading role, actor/actress in a supporting role, director and writing. 
+
+```{r message=FALSE, warning=FALSE}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(reshape2)
+library(plotly)
+```
+
+
+```{r}
+data <- read_excel("~/Documents/SKY/oscars/newoscars.xlsx", sheet = "data")
+```
+
+```{r}
+unique(colnames(data))
+```
+
+```{r}
+#selecting the necessary colums
+oscars <- data %>% select(Year, Category, Person, Film, Person_split, gender, Edition, yearbirth, age_award, nationality, Ethnicity)
+```
+
+
+
+# Winners' age
+
+The main purpose of this project was finding if women tend to recieve an Oscar Award younger than men. I know that I have three values missing for three males that I couldn't find their birth year. 
+
+```{r}
+which(is.na(oscars$age_award))
+```
+
+To compare like with like, I will take only acting categories, because directing and writing used to be older and there're fewer women in those categories. 
+
+As I have some extreme values, I think the better measure is the geometric mean. 
+
+
+```{r}
+psych::geometric.mean(oscars$age_award[oscars$gender=="female" & grepl("ACT",oscars$Category)])
+psych::geometric.mean(oscars$age_award[oscars$gender!="female" & grepl("ACT",oscars$Category)])
+45-36
+```
+
+
+Overall, since the first edition of the Academy Awards in 1928, actresses are almost 9 years younger than actors. The median age of women awarded is 36 versus 45 median years-old for men. 
+
+
+```{r}
+oscars %>% mutate(Year=Year+1) %>%filter(grepl("ACT", Category)) %>% mutate(Category=gsub(" IN A LEADING ROLE","",Category)) %>% mutate(Decade=cut(Year, breaks=10, include.lowest = TRUE,labels = c("1929-1937","1938-1946","1947-1955","1956-1964","1965-1973","1974-1982","1983-1991","1992-2000","2001-2009","2010-2018")))%>% group_by(Decade, Category)%>% summarise(Female = round(psych::geometric.mean(age_award[gender == "female"])), Male= round(psych::geometric.mean(na.omit(age_award[gender != "female"]))))%>% melt()%>%filter(!is.na(value))%>%filter(!c(Decade=="1928-1936" & grepl("IN A SUPPORTING ROLE", Category)))
+```
+
+
+```{r}
+ggplot(oscars %>% filter(grepl("ACT", Category)) %>% mutate(Category=gsub(c(" IN A LEADING ROLE| IN A SUPPORTING ROLE"),"",Category)) %>% mutate(Decade=cut(Year, breaks=10, include.lowest = TRUE, labels = c("1928-1936","1937-1945","1946-1954","1955-1963","1964-1972","1973-1981","1982-1990","1991-1999","2000-2008","2009-2017")))%>% group_by(Decade, Category)%>% summarise(Female = round(psych::geometric.mean(age_award[gender == "female"])), Male= round(psych::geometric.mean(na.omit(age_award[gender != "female"]))))%>% melt()%>%filter(!is.na(value)), aes(x=Decade,y=value,group=Category))+geom_line(aes(colour=Category))+labs(title = "Men over 40; women under 40",subtitle = "Mean age of actors and actresses awarded per decade",x="Decade",y="Age",colour=NULL )+scale_y_continuous(limits = c(20,50))+ theme(axis.text.x = element_text(angle = 35, hjust = 1))
+#ggsave("acting.png") 
+```
+
+
+```{r}
+ggplot(oscars %>% filter(grepl("ACT", Category)) %>% mutate(Category=gsub(" IN A LEADING ROLE","",Category)) %>% mutate(Decade=cut(Year, breaks=10, include.lowest = TRUE, labels = c("1928-1936","1937-1945","1946-1954","1955-1963","1964-1972","1973-1981","1982-1990","1991-1999","2000-2008","2009-2017")))%>% group_by(Decade, Category)%>% summarise(Female = round(psych::geometric.mean(age_award[gender == "female"])), Male= round(psych::geometric.mean(na.omit(age_award[gender != "female"]))))%>% melt()%>%filter(!is.na(value))%>%filter(!c(Decade=="1928-1936" & grepl("IN A SUPPORTING ROLE", Category))), aes(x=Decade,y=value,group=Category))+geom_line(aes(colour=Category))+labs(title = "Men in supporting roles, the oldest",subtitle = "Mean age of actors and actresses awarded per decade",x="Decade",y="Age",colour=NULL )+scale_y_continuous(limits = c(20,55))+ theme(axis.text.x = element_text(angle = 35, hjust = 1))
+#ggsave("fouracting.png")
+```
+
+```{r}
+psych::geometric.mean(oscars$age_award[oscars$gender=="female" & grepl("SUPPORTING",oscars$Category)])
+psych::geometric.mean(oscars$age_award[oscars$gender!="female" & grepl("SUPPORTING",oscars$Category)])
+```
+
+
+
+Actors in supporting role category tend to be older than any other acting category. 
+
+By category, the age difference is significant in women, but not in men. Females winners are younger in actress categories than in writing. However, the median age is quite similar in the categories analysed for men. 
+
+# Directing and writing by gender
+
+Only one woman has won an award in the directing category: Kathryn Bigelow (2009 with The hurt locker), compared to 91 men with a statuette in this category. 
+
+As for writing, there are 12 men with an award for every woman. 
+
+```{r}
+349/24
+24*14.54167
+259/22
+```
+
+
+```{r}
+oscars %>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="DIRECTING" & gender == "female")
+oscars %>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="WRITING" & gender != "female") %>% count() 
+oscars %>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="WRITING" & gender == "female") %>% count() 
+```
+
+## writing evolution
+
+```{r}
+psych::geometric.mean(oscars$age_award[oscars$gender=="female" & grepl("WRIT",oscars$Category)])
+psych::geometric.mean(oscars$age_award[oscars$gender!="female" & grepl("WRIT",oscars$Category)])
+```
+
+```{r}
+oscars %>% filter(grepl("WRIT", Category)) %>% group_by(gender)%>% count()
+```
+
+
+
+```{r}
+oscars %>% mutate(Year=Year+1)%>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="WRITING") %>% group_by(Year,gender)%>% count()
+```
+```{r}
+oscars %>% mutate(Year=Year+1)%>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="WRITING") %>% group_by(Year,gender)%>% count()
+```
+
+
+
+```{r}
+writingchart <- ggplot(oscars %>% mutate(Year=Year+1)%>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="WRITING") %>% group_by(Year,gender)%>% count(),aes(x=Year,y=n,fill=gender, text=paste("Year:",Year,"<br>", n, " ",gender, " awarded")))+geom_bar(stat="identity", width = .75)+labs(title = "1 female writer per each 12 men", subtitle = "Number of people awarded by year and sex", x=NULL, y=NULL,fill=NULL, caption = "Sky News analysis") + scale_fill_manual(breaks = c("female", "male"), values=c("#a67c00", "#ffcf40"))+ theme(legend.position="top", legend.justification = "right",legend.key.size = unit(.8,"line"),legend.text=element_text(size=10),panel.grid.major.y = element_line( size=.1, color="black" ),panel.background = element_blank())
+writingplotly <- ggplotly(writingchart, tooltip = c("text"))
+writingplotly
+```
+
+```{r}
+#To share in plotly
+#Sys.setenv("plotly_username"="")
+#Sys.setenv("plotly_api_key"="")
+
+#writingoscars=api_create(writingplotly, filename="oscars-ggplotly")
+#writingoscars
+```
+
+
+# Under 30
+
+```{r}
+oscars %>% select(Year, Category, Person, Film, yearbirth, age_award) %>% filter(!grepl("IN A SUPPORTING ROLE", Category)& !grepl("WRIT", Category) & !grepl("DIRECT", Category))%>% arrange(desc(age_award)) %>% filter(age_award <30)
+```
+
+
+66 people received an award when they were under 30. Three quarters of them (50) are female.
+
+```{r}
+oscars %>% filter(age_award <30)%>% select(Year, Category, gender, Person, Film,age_award)%>% mutate(Category=gsub(" \\(.*?\\)","",Category)) %>% group_by(Category, gender)%>%count()
+```
+
+
+```{r}
+oscars %>% filter(age_award <30) %>% filter(gender=="female"&grepl("WRITING", Category))
+```
+
+## Ethnicity
+
+```{r}
+length(oscars$Person_split[!is.na(oscars$Ethnicity)])
+```
+
+
+Only 33 people from ethnic minority background has won an Oscar in one of the six categories analysed. Five of them won several Oscars:
+- Alejandro González Iñárritu has three. 
+- Ang Lee has two. 
+- Anthony Quinn has two. 
+- Denzel Washington has two. 
+- Hillary Swank has two. 
+
+In total, there have been 38 prizes for people from ethnic minority since 1928. 22 of those 38 times the award was from the black minority; 10, latinos; 5 from Asian background, and 1 hispanic American. 
+
+Hattie McDaniel was the first African American to be nominated for acting and to win an Academy Award (Gone with the win, 1939, Actress in a supporting role). But it wasn't until the 80s when having winners from ethnic minorities was recurrent in the acting categories, although still a minority compared to the total winners.
+
+As for director and writers, Ang Lee in 2005 became the first Asian and first berson of color to win Best Director; and Geoffrey Fletcher was the first African American to win a screenplay Academy Award. 
+
+```{r}
+720-38
+682/38
+```
+
+
+```{r}
+ethnicchart <- ggplot(oscars %>% mutate(Year=Year+1) %>% arrange(Year) %>% group_by(Year, Ethnicity) %>% count()%>% mutate(colour=ifelse(!is.na(Ethnicity), "ethnic minority", "non ethnic minority")), aes(x=Year, y=n, fill=colour, text=paste("Year:",Year,"<br>","Winners from ",colour,": ", n)))+geom_bar(stat="identity")+labs(title = "Changes are coming but still in early stages", subtitle = "Number of people from minority background awarded by year", x=NULL, y="Number") + scale_fill_manual(breaks = c("Ethnic minority", "Non ethnic minority"), values=c("#a67c00", "#ffcf40"))+ theme(legend.position="top", legend.justification = "left",legend.key.size = unit(.8,"line"),legend.text=element_text(size=10),panel.grid.major.y = element_line( size=.1, color="black" ),panel.background = element_blank())+ylim(0,12)
+
+ethnicchartplot <- ggplotly(ethnicchart, tooltip=c("text"))
+ethnicchartplot <- ethnicchartplot %>% config(showLink=F, displayModeBar = F)
+
+
+#ethnoscars=api_create(ethnicchartplot, filename="ethnic-ggplotly")
+#ethnoscars
+#ggsave("ethnicity.png")
+```
+
+## Nationality
+
+```{r}
+length(oscars$Person_split[oscars$nationality=="U.S.A."])
+90/720
+```
+
+The US has historically been the predominant nationality of the Oscars. 73% of the awards in the six categories analysed throughout the 90 years went to US citizens. 
+
+However, the British is the second biggest nationality in the Oscars Awards, taking 13% of the prizes (90 times). Over the 90 years, 80 British has won an Oscars in the main six categories analysed. 
+
+
+```{r}
+oscars %>% arrange(Year)%>% mutate(Year=Year+1)%>% mutate(nationality=ifelse(nationality == "U.S.A.", "American", ifelse( nationality == "GB", "British", ifelse(nationality=="Italia", "Italian", ifelse(nationality=="Tsarist Russia", "Russian", ifelse(nationality=="Canada", "Canadian", ifelse(nationality=="FRG", "Guatemalan", ifelse(nationality=="fr", "French", ifelse(nationality=="hu", "Hungarian", ifelse(nationality=="Éire", "Irish", ifelse(nationality=="Republic of South Africa", "South African", ifelse(nationality=="Hellenic Republic", "Greece",ifelse(nationality=="Kingdom of Sweden", "Swedish", ifelse(nationality=="Swiss Confederation", "Swiss", ifelse(nationality=="Estado Libre Asociado de Puerto Rico", "Puerto Rican", ifelse(nationality=="MX", "Mexican", ifelse(nationality=="Commonwealth of Australia", "Australian", ifelse(nationality=="State of Japan", "Japanese", ifelse(nationality=="Kingdom of Cambodia", "Cambodian", ifelse(nationality=="NZ", "New Zealander", ifelse(nationality=="Czecho-Slovakia", "Czechoslovakian", ifelse(nationality=="España", "Spanish", ifelse(nationality=="POL", "Polish", ifelse(nationality=="AR", "Argentinian",nationality)))))))))) )))))))))))))) %>% group_by(Year, nationality) %>% count() %>% mutate(colour=ifelse(!nationality %in% c( "American", "British"), "others", nationality))
+```
+
+
+
+## Export
+
+```{r}
+oscars %>% mutate(Year=Year+1) %>% filter(grepl("ACT", Category)) %>% mutate(Category=gsub(" IN A LEADING ROLE","",Category)) %>% mutate(Decade=cut(Year, breaks=10, include.lowest = TRUE, labels = c("1929-1937","1938-1946","1947-1955","1956-1964","1965-1973","1974-1982","1983-1991","1992-2000","2001-2009","2010-2018")))%>% group_by(Decade, Category)%>% summarise(Female = round(psych::geometric.mean(age_award[gender == "female"])), Male= round(psych::geometric.mean(na.omit(age_award[gender != "female"]))))%>% melt()%>%filter(!is.na(value))
+```
+
+
+```{r}
+#write.csv(oscars %>% mutate(Year=Year+1) %>% filter(grepl("ACT", Category)) %>% mutate(Category=gsub(c(" IN A LEADING ROLE| IN A SUPPORTING ROLE"),"",Category)) %>% mutate(Decade=cut(Year, breaks=10, include.lowest = TRUE,labels = c("1929-1937","1938-1946","1947-1955","1956-1964","1965-1973","1974-1982","1983-1991","1992-2000","2001-2009","2010-2018")))%>% group_by(Decade, Category)%>% summarise(Female = round(psych::geometric.mean(age_award[gender == "female"])), Male= round(psych::geometric.mean(na.omit(age_award[gender != "female"]))))%>% melt()%>%filter(!is.na(value)), "gender.csv")
+```
+```{r}
+#write.csv(oscars %>% mutate(Year=Year+1) %>% filter(grepl("ACT", Category)) %>% mutate(Category=gsub(" IN A LEADING ROLE","",Category)) %>% mutate(Decade=cut(Year, breaks=10, include.lowest = TRUE, labels = c("1929-1937","1938-1946","1947-1955","1956-1964","1965-1973","1974-1982","1983-1991","1992-2000","2001-2009","2010-2018")))%>% group_by(Decade, Category)%>% summarise(Female = round(psych::geometric.mean(age_award[gender == "female"])), Male= round(psych::geometric.mean(na.omit(age_award[gender != "female"]))))%>% melt()%>%filter(!is.na(value)), "fouracting.csv")
+```
+```{r}
+#write.csv(oscars%>% mutate(Year=Year+1) %>% mutate(Category=gsub(" \\(.*?\\)","",Category))%>% filter(Category =="WRITING") %>% group_by(Year,gender)%>% count(),"writing.csv")
+```
+
+
+# Nominations
+
+After analysing the winners in the six categories above, I scraped the nominees from 17 categories since the first edition of the Oscars Awards. 
+
+The 17 categories included are:
+- Best Actor
+- Best Actress
+- Best Actor in a supporting role
+- Best Actress in a supporting role
+- Best director
+- Best writing Adapted Screenplay
+- Best writing original screenplay
+- Best Cinematography
+- Best Costume design
+- Best Film Editing
+- Best Makeup and hairstyle
+- Best Production design
+- Best Music Original Score
+- Best Music Original song
+- Best Sound editing
+- Best sound Mixing
+- Best visual effects
+
+Best picture, documentary or animated film are not included as those prizes involved a team and not a person. Likewise, it has been removed those awards in the categories above that were given to a comapnies (like MGM).
+
+Data comes from list of nominees by category in Wikipedia. After that, I used Wikidata to get the gender of each person. 
+
+Regarding ethnicity, I used the list in Wikipedia for African-American, Hispanic-America, Asian and Latinos.  
+
+```{r}
+nominees <- read_excel("/Users/carmenaguilargarcia/Documents/SKY/oscars/newnominees2.xlsx")
+unique(colnames(nominees))
+nominees[1]<-NULL
+nominees <-nominees[!duplicated(nominees),]
+```
+
+
+## Checking gender
+
+I double checked the number of women by category using the list of women nominated and winners in Wikipedia. When numbers didn't match, I looked for the specific errors. There were only two categories where further work was needed. 
+
+
+## Gender
+
+```{r}
+nominees %>% group_by(Year,gender) %>% count() %>% filter(gender=="female") %>% arrange(desc(n))
+```
+
+
+
+```{r}
+ggplot(nominees %>% group_by(Year,gender) %>% count(), aes(x=Year, y=n,group=gender))+geom_line(aes(color=gender))+ labs(title = "Oscars nominees over 90 years", x="Number")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+91st Academy Awards has the highest number of female nominees of the history, with 36 potential winners, two up from 2003 and four up from previous year. 
+
+```{r}
+ggplot(nominees %>% filter(!Category %in% c("Best Actor", "Best Actress", "Best Actor Supporting role", "Best Actress supporting role")), aes(x=gender))+geom_bar()+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+facet_wrap(~Category)+geom_text(aes(label=..count..), stat="count")
+
+```
+
+Without considering the acting categories, Women are under represented in all the categories, except in costume design, where there have been more women nominated than men. 
+
+Considering only those categories where at least 10 or more women has been nominated in one of the 91 editions, only the Best Costume design and the Makeup are quite gender balance. 
+
+Best Production Design stands out as the category that has done the biggest improvement. 
+
+The appearance of women in Sound Mixing and Editing is quite recently. 
+
+```{r}
+ggplot(nominees %>% filter(!Category %in% c("Best Actor", "Best Actress", "Best Actor Supporting role", "Best Actress supporting role", "Best Cinematography", "Best Director", "Best Original Score","Best Visual Effects")) %>% group_by(Category, Year,gender) %>% count(), aes(x=Year, y=n,group=gender))+geom_line(aes(color=gender))+ labs(title = "Oscars nominees over 90 years", y="Number")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+facet_wrap(~Category)
+```
+
+These are the two non-acting categories with the highest concentration of nominations in one single person. 
+
+```{r}
+nominees %>% filter(Category == "Best Costume Design" & gender == "female")%>% group_by(Nominees)  %>% count() %>% arrange(desc(n))
+```
+
+```{r}
+nominees %>% filter(Category == "Best Original Song" & gender == "female")%>% group_by(Nominees)  %>% count() %>% arrange(desc(n))
+```
+
+
+## Ethnicity in nominations
+
+
+Not considering from ethinic background
+- Hilary Swank
+- Hailee Steinfeld
+
+```{r}
+nominees$Ethnicity[nominees$Nominees == "Hilary Swank"] <- NA
+nominees$Ethnicity[nominees$Nominees == "Hailee Steinfeld"] <- NA
+```
+
+Four in 10 of the nominees from an ethnic background are African-American. 
+
+```{r}
+nominees%>% group_by(Ethnicity)%>% summarise(count=n()) %>% filter(!is.na(Ethnicity)) %>% mutate(per = count/sum(count))
+```
+
+
+```{r}
+ggplot(nominees %>% filter(!is.na(Ethnicity))%>% group_by(Year) %>% count(), aes(x=Year, y=n, group=1))+geom_line()+ labs(title = "Ethnicity in the Oscars", x="Number")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+```{r}
+ggplot(nominees %>% filter(!is.na(Ethnicity))%>% group_by(Year, Ethnicity)%>% count(), aes(x=Year,y=n,fill=Ethnicity))+geom_bar(stat="identity")+ labs(title = "Ethnicity in the Oscars", x="Number")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+The number of nominees from an ethnic background is at the highest point. There are 25 nominees who come from an ethnic background. That is the highest number over the 90 years of the awards, one up from 2006 and five more compared to last year. 
+
+40% of the nominees and winners with an ethnic background are African-American, followed by Asian (28%) and latinos (26%).
+
+```{r}
+ggplot(nominees%>% group_by(Year, Ethnicity)%>% count() %>% mutate(colour = ifelse(is.na(Ethnicity),"None","Ethnic minority")), aes(x=Year,y=n,fill=colour))+geom_bar(stat="identity")+ labs(title = "Ethnicity in the Oscars", x="Number")+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+```{r}
+nominees %>% mutate(ethnicminority = ifelse(is.na(Ethnicity),"None","Ethnic minority"))%>% group_by(Category, ethnicminority) %>% summarise(count=n())
+```
+
+
+```{r}
+ggplot(nominees %>% mutate(ethnicminority = ifelse(is.na(Ethnicity),"None","Ethnic minority")), aes(x=ethnicminority))+geom_bar()+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+facet_wrap(~Category)+geom_text(aes(label=..count..), stat="count")
+```
+
+
+## Export for visualisation
+
+```{r}
+#write.csv(nominees %>% group_by(Year, Category,gender, Won) %>% count(),"historic.csv")
+```
+
+
+```{r}
+#write.csv(nominees%>% group_by(Year, Ethnicity)%>% count() %>% mutate(colour = ifelse(is.na(Ethnicity),"None","Ethnic minority")), "ethnicityvisual.csv")
+```
+
