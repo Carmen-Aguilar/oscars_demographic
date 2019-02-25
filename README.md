@@ -37,6 +37,7 @@ When I was happy with my database, I changed to R to do more analysis.
 I then calculated the average age in which women and men won a statuette using the geometric mean and the ratio for categories like Best director and Best screenplay. 
 
 <strong>[Access the R Notebook](http://rpubs.com/Carmen_Aguilar/Oscars-demographic) with the full analysis</strong>
+
 <strong>[Download the R Notebook](https://github.com/Carmen-Aguilar/oscars_demographic/blob/master/oscarsanalysis.Rmd) with the full analysis</strong>
 
 ## Including =ImportHTML
@@ -45,4 +46,6 @@ A couple of weeks after concluding this, I was asked another analysis which incl
 
 I found the list of the nominees in Wikipedia (one page for each category) and I imported them using Google Sheet and the function =ImportHTML. I combined the 17 categories considered this time in one single document and I spent hours cleaning the database in OpenRefine. 
 
-Once I had the database, I repeated the process to get the gender for each of the nominees (and winners). Wikidata does not have information of the ethnic background, 
+Once I had the database, I repeated the process to get the gender parameter for each of the nominees (and winners) with wikidata. However, the ethnicity is not included in wikidata, so I used list from Wikipedia. 
+
+I changed again to R to do the analysis (included in the R Notebook mentions above) and to export the specific data to make the visualisations (in Datawrapper and Flourish).
