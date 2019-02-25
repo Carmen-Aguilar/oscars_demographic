@@ -48,4 +48,10 @@ I found the list of the nominees in Wikipedia (one page for each category) and I
 
 Once I had the database, I repeated the process to get the gender parameter for each of the nominees (and winners) with wikidata. However, the ethnicity is not included in wikidata, so I used list from Wikipedia. 
 
-I changed again to R to do the analysis (included in the R Notebook mentions above) and to export the specific data to make the visualisations (in Datawrapper and Flourish).
+I changed again to R to do the analysis (included in the R Notebook mentions above) and to export the specific data to make the visualisations.
+
+## Visualisations
+
+I used Datawrapper and Flourish to do the charts. 
+
+The first story inlcudes single charts. However, I used the story option in Flourish for the second piece, which gives the possibility of accompanying the charts with text to explain what people are seeing in lines and bars. 
