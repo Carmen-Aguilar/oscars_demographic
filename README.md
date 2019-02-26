@@ -1,5 +1,7 @@
 # A demographic analysis of the Oscars Awards
 
+*On February 26, "Anatomy of an Oscar winner" was updated with the last 2019 results. This analysis refers to the situation before the 91st Academy Awards ceremony.*
+
 In February 2018 I was involved in two different stories about the lack of diversity in the Oscars Awards. 
 
 The first analysis showed an age-gap between actors and actresses of 9 years and we reported it in the story [The anatomy of an Oscar winner](https://news.sky.com/story/anatomy-of-an-oscar-winner-11635455) published a week before the event in Hollywood. 
